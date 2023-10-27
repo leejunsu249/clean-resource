@@ -1,0 +1,34 @@
+default:
+  image: 676826599814.dkr.ecr.ap-northeast-2.amazonaws.com/gitlab-runner-image-aws-sdk:1.0
+
+variables:
+  AWS_ROLE_SESSION_NAME: "gitlab-$CI_PIPELINE_ID-$CI_JOB_NAME"
+
+cache:
+  key: $CI_COMMIT_BRANCH-terraform
+  paths:
+    - terraform/.terraform
+
+include:
+  - project: 'common/gitlab-script'
+    ref: v2.5
+    file: '/template/.before-script-template.yml'
+  - project: 'common/gitlab-script'
+    ref: v2.5
+    file: '/template/.infra-workflow-script-template.yml'
+
+stages:
+  - clean
+
+clean:
+  stage: clean
+  tags: 
+    - shared
+  environment:
+    name: dev
+  extends: .aws-assume-template
+  script:
+    - aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER}
+    - aws eks update-kubeconfig --region ap-northeast-2 --name eks-an2-dev-naemo-wallet
+    - python3 clean.py ${ACCESS_TOKEN} ${ARGO_TOKEN} 
+  resource_group: dev
